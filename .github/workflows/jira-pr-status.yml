@@ -6,7 +6,6 @@ on:
 
 permissions:
     contents: read
-    pull-requests: read
 
 jobs:
     report-status:
@@ -15,9 +14,6 @@ jobs:
         steps:
             - name: Report pull request event
               env:
-                  GH_TOKEN: ${{ github.token }}
-                  GITHUB_REPOSITORY: ${{ github.repository }}
-                  PR_NUMBER: ${{ github.event.pull_request.number }}
                   JIRA_BASE_URL: ${{ vars.ATLASSIAN_SITE }}
                   JIRA_USER_EMAIL: ${{ secrets.ATLASSIAN_USER_EMAIL }}
                   JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
@@ -33,17 +29,7 @@ jobs:
                     exit 0
                   fi
 
-                  # A merged specification PR (only specs/ files) is not the finished feature, so it must not
-                  # move the Jira issue to Done; spec-merged-dispatch.yml starts the implementation instead.
-                  non_spec_files=""
                   if [[ "$PR_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
-                    non_spec_files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" \
-                      --jq '.[].filename | select(startswith("specs/") | not)')
-                  fi
-
-                  if [[ "$PR_ACTION" == "closed" && "$PR_MERGED" == "true" && -z "$non_spec_files" ]]; then
-                    message="Specification merged: $PR_URL"
-                  elif [[ "$PR_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
                     transitions=$(curl --fail-with-body --silent --show-error \
                       --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
                       --header 'Accept: application/json' \

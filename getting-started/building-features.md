@@ -1,74 +1,35 @@
 # Building Features Guide
 
-This guide describes the repeatable feature workflow used for WAPP-1 Weather Lookup and WAPP-2 Temperature Unit Toggle. After setup, the intended human intervention is limited to reviewing and merging the specification PR and the implementation PR.
+This guide describes the repeatable feature workflow for the Weather App. After setup, a feature starts when someone creates a Jira issue, and the only human intervention is reviewing and merging the agent's pull request.
 
 ## Lifecycle at a glance
 
 ```text
-Jira Story (To Do)
-  -> specification PR  [WAPP-n], specs/ only
-  -> human merges the specification PR       Jira gets a comment, stays open
-  -> implementation dispatch
-  -> GitHub issue labeled agent-ready  +  agent started
+Jira issue created in WAPP
+  -> Jira Automation sends the issue key to GitHub
+  -> GitHub issue  [WAPP-n] <summary>, labeled agent-ready
+  -> Implement approved Jira work starts
   -> Jira In Progress
-  -> Copilot implementation
-  -> draft implementation PR  [agent] [WAPP-n]
-  -> CI and human review
-  -> human merges the implementation PR
+  -> agent writes the spec and plan, tests, and code
+  -> draft PR  [agent] [WAPP-n] ...
+  -> human starts the checks, reviews, and merges
   -> Jira Done, GitHub issue closed
 ```
 
 Jira is the source of truth for requirements, priority, ownership, and status. GitHub is the source of truth for code, pull requests, CI, and agent execution.
 
-## 1. Choose the next feature
+## 1. Write the Jira issue
 
-Start from an open question, a user problem, or a clearly bounded improvement. Prefer one independently testable behavior per feature.
+**The agent starts the moment you press Create.** Write the issue completely before creating it; do not create a placeholder and fill it in later.
 
-For the Weather App, the first feature was WAPP-1 Weather Lookup. Its open question about Celsius versus Fahrenheit became WAPP-2 Temperature Unit Toggle.
+Prefer one independently testable behavior per issue, and write the description as the requirements the agent will follow:
 
-Before creating work, check:
+- **User story:** who wants what, and why.
+- **Scope:** what is in and what is out.
+- **Acceptance criteria:** observable outcomes, one per line.
+- **References:** related specs or earlier issues, if any.
 
-- Is the behavior separate from existing scope?
-- Can acceptance criteria be written as observable outcomes?
-- Can it be implemented without changing unrelated contracts?
-- Is there an existing specification or decision that constrains it?
-
-Avoid starting with a vague request such as `make the weather better`. Write a concrete outcome instead.
-
-## 2. Create the Jira Story
-
-Create a Story in Jira project `WAPP`:
-
-- Summary: short feature name.
-- Description: user story, scope, and acceptance criteria. Add links to the repository spec and plan once they exist.
-- Status: `To Do`.
-
-Jira generates the key, for example `WAPP-3`. Use that exact key everywhere a key appears: the specification's Feature ID, PR titles, and commit messages. Do not zero-pad it: the workflows look up the key from PR titles, and Jira has no issue called `WAPP-003`.
-
-Leave the Story in `To Do`. Implementation starts only when its specification PR is merged.
-
-## 3. Write the specification
-
-Create a new numbered directory under `specs/`. The directory number is only for ordering and may be zero-padded:
-
-```text
-specs/003-your-feature/
-  spec.md
-  plan.md
-```
-
-The specification should contain:
-
-- Feature ID: the Jira key, for example `WAPP-3`.
-- User story.
-- In-scope and out-of-scope behavior.
-- Functional requirements.
-- Non-functional requirements when relevant.
-- API or UI contract.
-- Acceptance criteria.
-- Risks and open questions.
-
-Keep the specification testable. Example acceptance criteria from WAPP-2:
+Example acceptance criteria from WAPP-2 Temperature Unit Toggle:
 
 - A fresh page displays Celsius by default.
 - Selecting Fahrenheit converts the current displayed value.
@@ -76,93 +37,63 @@ Keep the specification testable. Example acceptance criteria from WAPP-2:
 - Switching units does not issue another provider request.
 - The control is keyboard accessible.
 
-Update `specs/README.md` with a link to the new specification.
+Avoid vague requests such as `make the weather better`. The agent will not implement ambiguous or missing requirements; it stops without opening a PR, and the Jira issue is left in `In Progress`.
 
-## 4. Open the specification PR
+## 2. What happens automatically
 
-Create a branch and commit only the specification and supporting plan:
+Within about a minute of creating the issue:
 
-```bash
-git switch -c feat/wapp-3-your-feature-spec
-git add specs/003-your-feature specs/README.md
-git diff --cached --check
-git commit -m "Specify WAPP-3 your feature"
-git push --set-upstream origin feat/wapp-3-your-feature-spec
-```
+1. The Jira Automation rule sends the issue key to GitHub.
+2. **Sync Jira issue to GitHub and start the agent** (`jira-ready-dispatch.yml`) reads the issue from Jira and creates a GitHub issue titled `[WAPP-n] <summary>`, with the full description and the `agent-ready` and `jira-synced` labels.
+3. The same workflow starts **Implement approved Jira work** for that GitHub issue.
+4. Jira moves to `In Progress`.
 
-Open a PR whose title starts with the Jira key in brackets:
+Step 3 is an explicit dispatch, not the label. Anything done with the built-in Actions token, including adding a label, cannot trigger another workflow; GitHub makes an exception only for `workflow_dispatch` and `repository_dispatch`. The implementation workflow allows `github-actions[bot]` in its `on.bots` list so that dispatch passes its permission check.
 
-```text
-[WAPP-3] Specify your feature
-```
+Issues that `jira-sync.yml` created from a GitHub issue are skipped at step 2, so the two syncs cannot loop.
 
-Both rules matter. `spec-merged-dispatch.yml` treats a merged PR as a specification only when its title starts with `[WAPP-<number>]` **and** every changed file is under `specs/`. A PR that also touches code or docs will not start the agent.
+## 3. What the agent does
 
-The specification PR is the first review boundary. Reviewers check scope and acceptance criteria, not implementation code.
-
-## 5. Review and merge the specification PR
-
-Wait for CI, review the specification, and merge the PR. After merge:
-
-1. `jira-pr-status.yml` sees that only `specs/` changed, comments "Specification merged" on the Jira issue, and leaves its status alone.
-2. `spec-merged-dispatch.yml` reads the Jira issue and sends a `jira-ready-for-development` repository dispatch.
-3. `jira-ready-dispatch.yml` creates a GitHub issue titled `[WAPP-3] <summary>` with the `agent-ready` and `jira-synced` labels.
-4. The same workflow starts **Implement approved Jira work** for that issue number.
-5. Jira moves to `In Progress`.
-
-Step 4 is an explicit dispatch, not the label. Anything done with the built-in Actions token (`github.token`), including adding a label, cannot trigger another workflow; GitHub makes an exception only for `workflow_dispatch` and `repository_dispatch`. The implementation workflow allows `github-actions[bot]` in its `on.bots` list so that dispatch passes its permission check.
-
-Check it started: **Actions > Implement approved Jira work** should show a run for the new issue within a minute.
-
-## 6. Let the agent implement
-
-The implementation workflow reads:
-
-- The GitHub issue.
-- The linked Jira description.
-- The specification on `main`.
-- The relevant implementation plan.
-
-It should:
+The implementation workflow reads the GitHub issue, which carries the Jira description, and the existing specifications in `specs/`. It should:
 
 - Inspect the existing code before editing.
-- Follow the plan's test strategy.
-- Keep the API contract stable unless the specification explicitly changes it.
+- Write `specs/<next number>-<short-name>/spec.md` and `plan.md` from the issue when no specification covers it, and link it from `specs/README.md`.
+- Follow the plan's test-first approach.
+- Keep the API contract stable unless the requirements explicitly change it.
 - Run focused tests.
 - Open one draft PR with the Jira key in the title and `Closes #<issue>` in the body.
 - Report changed files, tests, and unresolved risks.
 
-The agent is restricted by `allowed-files`. It may modify application, tests, specifications, documentation, and approved manifests, but not workflow files or credentials.
+The agent is restricted by `allowed-files`. It may modify application, tests, specifications, documentation, and approved manifests, but not workflow files or credentials. No manual code changes are required at this stage.
 
-No manual code changes are required at this stage.
-
-## 7. Review the implementation PR
+## 4. Review the implementation PR
 
 When the draft PR appears:
 
 1. **Start its checks.** The PR is opened by `github-actions[bot]`, so its workflow runs wait for approval and show as **Action required**. Approve the pending runs from the PR's checks, or push a commit to the branch (for example with **Update branch**): a human push starts CI normally.
 2. Check that the PR title contains the Jira key and the body closes the GitHub issue.
-3. Compare the implementation against the acceptance criteria.
-4. Inspect the tests and confirm external calls are mocked where required.
-5. Confirm CI passes, especially `Tests / tests`, which runs both pytest and the JavaScript tests.
-6. Check that no secrets or unrelated files were changed.
-7. Resolve review comments.
-8. Mark the PR **Ready for review**, then approve and merge it.
+3. Read the specification the agent wrote and compare it with the Jira issue. The spec is part of the review.
+4. Compare the implementation against the acceptance criteria.
+5. Inspect the tests and confirm external calls are mocked where required.
+6. Confirm CI passes, especially `Tests / tests`, which runs both pytest and the JavaScript tests.
+7. Check that no secrets or unrelated files were changed.
+8. Resolve review comments.
+9. Mark the PR **Ready for review**, then approve and merge it.
 
 The human review and merge are the safety gate. Do not allow the agent to merge its own PR.
 
-## 8. Automatic completion
+## 5. Automatic completion
 
-When the implementation PR is merged, `jira-pr-status.yml`:
+When the PR is merged, `jira-pr-status.yml`:
 
 1. Extracts the Jira key from the PR title.
-2. Sees that the PR changed files outside `specs/`.
-3. Looks up the Jira project's `Done` transition and transitions the Jira issue to `Done`.
+2. Looks up the Jira project's `Done` transition.
+3. Transitions the Jira issue to `Done`.
 4. Adds the merged PR link as a Jira comment.
 
 GitHub closes the linked issue through the `Closes #<issue>` line. If a PR is closed without merging, Jira receives a status comment but is not marked Done.
 
-## 9. Verify the feature after merge
+## 6. Verify the feature after merge
 
 Update local `main` and run the application:
 
@@ -179,21 +110,26 @@ python app.py
 
 Exercise the feature manually in a browser. For Weather Lookup, verify known, unknown, and empty-city behavior. For a UI feature such as WAPP-2, verify fresh-session defaults, switching, reload persistence, and no duplicate provider request.
 
-Record any follow-up as a new Jira Story or Bug rather than silently expanding the merged feature.
+Record any follow-up as a new Jira issue rather than silently expanding the merged feature.
 
-## 10. Troubleshooting
+## 7. Troubleshooting
 
-### The agent did not start
+### Nothing appeared in GitHub
 
-1. Open **Actions > Create GitHub issue from Jira readiness** and read the latest run. If the GitHub issue for the key already existed, the workflow only comments and moves Jira; it does not start a second implementation.
-2. If the run is missing, open **Actions > Dispatch implementation after specification merge**. Its log says why a PR was not treated as a specification: the title does not start with `[WAPP-<number>]`, or the PR changed files outside `specs/`.
-3. If **Implement approved Jira work** ran but its `pre_activation` job denied access, check that `github-actions[bot]` is still listed under `on.bots` in `implement-agent-ready.md`.
+1. In Jira, open **Project settings > Automation**, then the rule's **Audit log**. The web request should have returned `204`.
+   - `401`: the token is wrong or expired.
+   - `404`: the URL is wrong, or the token cannot see the repository.
+   - `403`: the token lacks **Contents: Read and write**.
+2. If Jira shows `204`, open **Actions > Sync Jira issue to GitHub and start the agent** and read the run log. It says when it skipped an issue: one created from a GitHub issue, or one whose GitHub issue already exists.
 
-To start the agent by hand for an existing issue:
+### The GitHub issue exists but the agent did not start
 
-```bash
-gh workflow run implement-agent-ready.lock.yml -f issue_number=<issue number>
-```
+1. Open **Actions > Implement approved Jira work**. If its `pre_activation` job denied access, check that `github-actions[bot]` is still listed under `on.bots` in `implement-agent-ready.md`.
+2. Start the agent by hand:
+
+   ```bash
+   gh workflow run implement-agent-ready.lock.yml -f issue_number=<issue number>
+   ```
 
 Removing and re-adding the `agent-ready` label yourself also works, because a label added by a person does trigger workflows.
 
@@ -204,13 +140,12 @@ Inspect the agent run's safe-output logs. Common causes are:
 - GitHub Actions is not allowed to create pull requests.
 - A generated file is outside `create-pull-request.allowed-files`.
 - A protected file triggered review fallback.
-- The agent produced `noop` because requirements were incomplete.
+- The agent produced `noop` because requirements were incomplete. Improve the Jira description, then start the agent again as above.
 
-Fix the workflow policy, merge the fix, and start the agent again as above.
+Fix the workflow policy, merge the fix, and start the agent again.
 
 ### Jira did not move to In Progress or Done
 
-- A merged specification PR deliberately leaves Jira open; only the implementation PR moves it to Done.
 - Check that the Jira project has statuses named exactly `In Progress` and `Done`, and that the integration account can transition issues.
 - Check the PR title contains the Jira key exactly as Jira shows it, without zero-padding.
 
@@ -224,14 +159,12 @@ Update the feature branch from `origin/main`, resolve conflicts, push, and rerun
 
 ## Workshop completion checklist
 
-- [ ] Jira Story created in `WAPP` and left in `To Do`.
-- [ ] Feature specification and plan added under `specs/`.
-- [ ] Specification PR title starts with the Jira key and the PR changes only `specs/`.
-- [ ] Specification PR reviewed and merged; Jira received a "Specification merged" comment and is not Done.
-- [ ] GitHub issue created with `agent-ready`, and **Implement approved Jira work** started for it.
+- [ ] Jira issue created in `WAPP` with a user story, scope, and acceptance criteria.
+- [ ] GitHub issue `[WAPP-n] ...` appeared with the `agent-ready` label.
+- [ ] **Implement approved Jira work** started for it.
 - [ ] Jira status changed to `In Progress`.
-- [ ] Agent draft implementation PR created.
-- [ ] Checks approved, CI passed, and implementation PR reviewed.
-- [ ] Implementation PR merged.
+- [ ] Agent draft PR created, including a specification under `specs/`.
+- [ ] Checks approved, CI passed, and PR reviewed.
+- [ ] PR merged.
 - [ ] Jira issue automatically changed to `Done` and the GitHub issue closed.
 - [ ] Feature manually verified on updated `main`.

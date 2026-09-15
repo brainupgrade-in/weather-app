@@ -1,4 +1,4 @@
-name: Create GitHub issue from Jira readiness
+name: Sync Jira issue to GitHub and start the agent
 
 on:
     repository_dispatch:
@@ -20,14 +20,14 @@ jobs:
                   JIRA_USER_EMAIL: ${{ secrets.ATLASSIAN_USER_EMAIL }}
                   JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
                   JIRA_KEY: ${{ github.event.client_payload.jira_key }}
-                  JIRA_URL: ${{ github.event.client_payload.jira_url }}
-                  JIRA_SUMMARY: ${{ github.event.client_payload.summary }}
-                  JIRA_DESCRIPTION: ${{ github.event.client_payload.description }}
               run: |
                   set -euo pipefail
 
-                  test -n "$JIRA_KEY"
-                  test -n "$JIRA_SUMMARY"
+                  if [[ ! "$JIRA_KEY" =~ ^[A-Z][A-Z0-9]+-[0-9]+$ ]]; then
+                    echo "client_payload.jira_key is missing or not a Jira key: '$JIRA_KEY'"
+                    exit 1
+                  fi
+                  jira_url="$JIRA_BASE_URL/browse/$JIRA_KEY"
 
                   transition_to_in_progress() {
                     transitions=$(curl --fail-with-body --silent --show-error \
@@ -43,23 +43,41 @@ jobs:
                       "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/transitions"
                   }
 
+                  # The Jira Automation rule sends only the key. The issue text is read here, so quotes and newlines in
+                  # a description never have to survive being pasted into the rule's JSON body.
+                  jira_issue=$(curl --fail-with-body --silent --show-error \
+                    --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                    --header 'Accept: application/json' \
+                    "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY?fields=summary,description")
+                  summary=$(jq -er '.fields.summary' <<< "$jira_issue")
+                  # Flatten the whole Atlassian Document Format description, one block per paragraph or list.
+                  description=$(jq -r '[.fields.description.content[]?
+                    | [.. | objects | if .type == "text" then .text elif .type == "hardBreak" then "\n" else empty end]
+                    | join("")] | join("\n\n")' <<< "$jira_issue")
+
+                  # jira-sync.yml creates Jira issues from GitHub issues and writes this line into their description.
+                  # Those already have a GitHub issue, so skip them instead of creating a second one.
+                  if [[ "$description" == *"GitHub issue: https://github.com/$GITHUB_REPOSITORY/issues/"* ]]; then
+                    echo "$JIRA_KEY was created from a GitHub issue; nothing to do."
+                    exit 0
+                  fi
+
                   # Search also matches other titles that mention the key, such as "[agent] [WAPP-1] ...", so keep only
                   # the issue this workflow creates: its title starts with "[<key>] ".
                   existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "${JIRA_KEY} in:title" \
                     --limit 100 --json number,title \
                     | jq -r --arg prefix "[$JIRA_KEY] " 'map(select(.title | startswith($prefix))) | .[0].number // empty')
                   if [[ -n "$existing" ]]; then
-                    gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Jira issue is ready for development: $JIRA_URL"
-                    transition_to_in_progress
+                    echo "GitHub issue #$existing already exists for $JIRA_KEY; not starting a second implementation."
                     exit 0
                   fi
 
-                  body=$(printf '%s\n\nJira issue: %s\n\nThe specification for this Jira issue was merged. The Copilot agent will implement it and open a draft pull request for human review.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
+                  body=$(printf '%s\n\nJira issue: %s\n\nCreated from Jira. The Copilot agent will implement it and open a draft pull request for human review.' "${description:-No description provided.}" "$jira_url")
 
                   # gh issue create prints the new issue's URL; the issue number is its last path segment.
                   issue_url=$(gh issue create \
                     --repo "$GITHUB_REPOSITORY" \
-                    --title "[$JIRA_KEY] $JIRA_SUMMARY" \
+                    --title "[$JIRA_KEY] $summary" \
                     --body "$body" \
                     --label "agent-ready,jira-synced")
                   issue_number="${issue_url##*/}"

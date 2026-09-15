@@ -1,6 +1,6 @@
 # Workshop Setup Guide
 
-This guide sets up the accelerated agent-driven SDLC used by the Weather App. The goal is to let Jira hold the work item, let GitHub Agentic Workflows coordinate implementation, and keep human involvement at specification review, pull request review, and merge.
+This guide sets up the accelerated agent-driven SDLC used by the Weather App. The goal is to let Jira hold the work item, let GitHub Agentic Workflows coordinate implementation, and keep human involvement at pull request review and merge.
 
 ## 1. Prerequisites
 
@@ -52,8 +52,7 @@ Important files include:
 
 - `implement-agent-ready.md`: Copilot implementation workflow source
 - `implement-agent-ready.lock.yml`: compiled workflow executed by Actions
-- `spec-merged-dispatch.yml`: starts implementation after a specification PR merge
-- `jira-ready-dispatch.yml`: creates the GitHub issue and starts the implementation agent
+- `jira-ready-dispatch.yml`: turns a new Jira issue into a GitHub issue and starts the implementation agent
 - `jira-pr-status.yml`: reports PRs to Jira and marks the feature Done
 - `jira-sync.yml`: creates a Jira issue for each newly opened GitHub issue
 - `tests.yml`: required CI check (pytest and JavaScript tests)
@@ -130,25 +129,58 @@ In Jira project `WAPP`:
 
 The repository transitions Jira by status name, so `In Progress` and `Done` must match exactly, including capitalisation. No other status is required.
 
-## 9. How work reaches the agent
+## 9. Create the Jira Automation rule
 
-No Jira Automation rule or webhook is needed. Implementation starts when a human merges a specification PR:
+Every issue created in `WAPP` is sent to GitHub the moment it is created, and starts the implementation agent. A Jira Automation rule sends the issue key to GitHub's repository dispatch API.
 
-1. `spec-merged-dispatch.yml` checks that the merged PR is a specification PR: its title starts with `[WAPP-<number>]` and it changes only files under `specs/`.
-2. It reads that Jira issue and sends a `jira-ready-for-development` repository dispatch.
-3. `jira-ready-dispatch.yml` creates the GitHub issue, starts `Implement approved Jira work` for it, and moves Jira to `In Progress`.
+**Anyone who can create issues in `WAPP` can start the agent.** Limit the project's *Create issues* permission to the people who should be able to do that.
 
-The details and troubleshooting are in [building-features.md](building-features.md).
+### Create a GitHub token for the rule
 
-To test the handoff without a specification PR, send the dispatch yourself. This starts the agent, which consumes Copilot credits and opens a draft PR:
+In GitHub, open **Settings > Developer settings > Personal access tokens > Fine-grained tokens > Generate new token**:
+
+- **Resource owner:** the account or organisation that owns your copy of the repository.
+- **Repository access:** *Only select repositories*, and pick only your `weather-app` copy.
+- **Repository permissions:** **Contents: Read and write**. The dispatch API requires it; *Metadata: Read* is added automatically.
+- **Expiration:** the length of the workshop.
+
+Anyone who can edit the Jira rule can read this token, which is why it is limited to one repository and one permission.
+
+### Create the rule
+
+In Jira, open project `WAPP` > **Project settings > Automation > Create rule**:
+
+1. **Trigger:** *Issue created*.
+2. **Action:** *Send web request*:
+   - **Web request URL:** `https://api.github.com/repos/OWNER/weather-app/dispatches`
+   - **HTTP method:** `POST`
+   - **Headers:**
+
+     ```text
+     Accept: application/vnd.github+json
+     Authorization: Bearer <the token above>
+     Content-Type: application/json
+     ```
+
+   - **Web request body:** *Custom data*:
+
+     ```json
+     {"event_type": "jira-ready-for-development", "client_payload": {"jira_key": "{{issue.key}}"}}
+     ```
+
+3. Name the rule, for example *Send new issues to GitHub*, and turn it on.
+
+The rule sends only the key. `jira-ready-dispatch.yml` reads the summary and description from Jira with the `ATLASSIAN_*` secrets, so the issue text never has to be escaped into JSON. GitHub answers a successful dispatch with HTTP `204`, which the rule's **Audit log** shows.
+
+- **Loop guard:** issues that `jira-sync.yml` creates from GitHub issues also fire the rule. The workflow recognises them by the `GitHub issue:` link in their description and skips them.
+- **Free plan:** Jira Free allows a limited number of automation rule runs each month, and every created issue uses one. Check your usage before a workshop where many people create issues.
+
+To test the GitHub side without Jira Automation, send the dispatch yourself for an existing Jira issue. This starts the agent, which consumes Copilot credits and opens a draft PR:
 
 ```bash
 gh api repos/OWNER/weather-app/dispatches \
   --field event_type=jira-ready-for-development \
-  --field "client_payload[jira_key]=WAPP-3" \
-  --field "client_payload[jira_url]=https://your-site.atlassian.net/browse/WAPP-3" \
-  --field "client_payload[summary]=Short feature name" \
-  --field "client_payload[description]=Acceptance criteria"
+  --field "client_payload[jira_key]=WAPP-3"
 ```
 
 ## 10. Configure optional Atlassian MCP
@@ -198,8 +230,9 @@ You are ready when:
 - GitHub Actions variables and the three secrets, including `COPILOT_GITHUB_TOKEN`, are configured.
 - The five labels exist.
 - Jira `WAPP` has the statuses `To Do`, `In Progress`, and `Done`.
+- The Jira Automation rule is on, and its GitHub token can reach only your repository.
 - `gh aw compile` succeeds with no errors.
 - CI passes on a test branch.
-- A test GitHub issue creates a linked Jira issue without exposing a secret.
+- A small test issue created in Jira appears as a GitHub issue within a minute, and **Implement approved Jira work** starts for it.
 
 For the repeatable feature workflow, continue with [building-features.md](building-features.md).
