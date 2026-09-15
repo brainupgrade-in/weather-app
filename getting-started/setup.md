@@ -144,7 +144,18 @@ In GitHub, open **Settings > Developer settings > Personal access tokens > Fine-
 - **Repository permissions:** **Contents: Read and write**. The dispatch API requires it; *Metadata: Read* is added automatically.
 - **Expiration:** the length of the workshop.
 
-Anyone who can edit the Jira rule can read this token, which is why it is limited to one repository and one permission.
+Mark the header that carries the token as hidden when you create the rule. Even then, anyone who can edit the rule can change where it sends requests, which is why the token is limited to one repository and one permission.
+
+### Check the token before saving it
+
+```bash
+read -rsp 'Token: ' GH_RULE_TOKEN; echo
+curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  -H "Authorization: Bearer $GH_RULE_TOKEN" -H 'Accept: application/vnd.github+json' \
+  https://api.github.com/repos/OWNER/weather-app/dispatches -d '{"event_type": "token-check"}'
+```
+
+Expect `204`. No workflow listens for `token-check`, so nothing runs. Run the same request against any other repository: it should return `403` (*Resource not accessible by personal access token*). A `204` there means the token reaches more than this repository; generate it again with **Only select repositories**.
 
 ### Create the rule
 
@@ -162,6 +173,8 @@ In Jira, open project `WAPP` > **Project settings > Automation > Create rule**:
      Content-Type: application/json
      ```
 
+     Mark the `Authorization` header as hidden, so Jira masks its value once the rule is saved.
+
    - **Web request body:** *Custom data*:
 
      ```json
@@ -170,18 +183,53 @@ In Jira, open project `WAPP` > **Project settings > Automation > Create rule**:
 
 3. Name the rule, for example *Send new issues to GitHub*, and turn it on.
 
+These UI steps follow the rule's configuration. The workshop's own rule was created through the API below, so labels in your Jira may differ slightly.
+
+### Or create the rule through the API
+
+Jira's Automation REST API creates the same rule: `POST https://api.atlassian.com/automation/public/jira/<cloudId>/rest/v1/rule`, with basic authentication using a Jira API token. Get `<cloudId>` from `https://<your-site>.atlassian.net/_edge/tenant_info`.
+
+- **Body:** `{"rule": {...}, "connections": []}`.
+- **Trigger** `type`: `jira.issue.event.trigger:created`, with `eventFilters` set to the project ARI `ari:cloud:jira:<cloudId>:project/<projectId>`. Use the same ARI in `ruleScopeARIs`.
+- **Action** `type`: `jira.issue.outgoing.webhook`, with `headerSecure: true` on the `Authorization` header.
+- **Easy to miss:** `authorAccountId` (your account ID from `/rest/api/3/myself`) and `actor: {"type": "ACCOUNT_ID", "actor": "<account ID>"}`. Without them the API answers only `400 The request body could not be parsed`. The request that succeeded also sent `labels: []`, `writeAccessType: "UNRESTRICTED"` and `collaborators: []`.
+
+A successful create returns `201` with a `ruleUuid`. Read the rule back with `GET .../rule/<ruleUuid>` and check that `state` is `ENABLED` and the header is still `headerSecure`; the API does not return a hidden header's value.
+
 The rule sends only the key. `jira-ready-dispatch.yml` reads the summary and description from Jira with the `ATLASSIAN_*` secrets, so the issue text never has to be escaped into JSON. GitHub answers a successful dispatch with HTTP `204`, which the rule's **Audit log** shows.
 
 - **Loop guard:** issues that `jira-sync.yml` creates from GitHub issues also fire the rule. The workflow recognises them by the `GitHub issue:` link in their description and skips them.
 - **Free plan:** Jira Free allows a limited number of automation rule runs each month, and every created issue uses one. Check your usage before a workshop where many people create issues.
 
-To test the GitHub side without Jira Automation, send the dispatch yourself for an existing Jira issue. This starts the agent, which consumes Copilot credits and opens a draft PR:
+### Smoke-test the rule without starting the agent
+
+Create a throwaway issue in `WAPP` whose description ends with this line, using your repository:
+
+```text
+GitHub issue: https://github.com/OWNER/weather-app/issues/0
+```
+
+That is the marker `jira-sync.yml` writes, so the workflow treats the issue as already synced and stops before creating anything. Within about 10 seconds, **Actions > Sync Jira issue to GitHub and start the agent** shows a successful run whose log ends with:
+
+```text
+WAPP-<n> was created from a GitHub issue; nothing to do.
+```
+
+That proves the rule fires, GitHub accepts the token, and the workflow can read Jira, without creating a GitHub issue, starting the agent, or spending Copilot credits. Delete the throwaway issue afterwards. Jira does not reuse its key, so your next real issue gets the following number.
+
+### Test the GitHub side without Jira
+
+Send the dispatch yourself for an existing Jira issue. Unlike the smoke test, this starts the agent, which consumes Copilot credits and opens a draft PR:
 
 ```bash
 gh api repos/OWNER/weather-app/dispatches \
   --field event_type=jira-ready-for-development \
-  --field "client_payload[jira_key]=WAPP-3"
+  --field "client_payload[jira_key]=WAPP-<n>"
 ```
+
+### Renew the token
+
+The token stops working on its expiry date, and nothing fails visibly: new Jira issues simply stop reaching GitHub, and the rule's audit log shows `401`. Before that date, generate a replacement with the same settings, check it as above, paste it into the rule's `Authorization` header as `Bearer <token>`, and run the smoke test again.
 
 ## 10. Configure optional Atlassian MCP
 
@@ -233,6 +281,7 @@ You are ready when:
 - The Jira Automation rule is on, and its GitHub token can reach only your repository.
 - `gh aw compile` succeeds with no errors.
 - CI passes on a test branch.
-- A small test issue created in Jira appears as a GitHub issue within a minute, and **Implement approved Jira work** starts for it.
+- The smoke test in §9 logged `nothing to do` for a throwaway issue, and you deleted that issue.
+- You have noted the token's expiry date, and when to renew it.
 
 For the repeatable feature workflow, continue with [building-features.md](building-features.md).
