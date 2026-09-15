@@ -50,9 +50,11 @@ jobs:
                   fi
 
                                     body=$(printf '%s\n\nJira issue: %s\n\nThis issue was marked agent-ready in Jira. The Copilot agent will implement it and open a draft pull request for human review.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
-                                    gh issue create \
+                                    created=$(gh issue create \
                                         --repo "$GITHUB_REPOSITORY" \
                     --title "[$JIRA_KEY] $JIRA_SUMMARY" \
                     --body "$body" \
-                                        --label "agent-ready,jira-synced"
+                                                                                --label "jira-synced" \
+                                        --json number --jq '.number')
+                                    gh issue edit "$created" --repo "$GITHUB_REPOSITORY" --add-label agent-ready
                                     transition_to_in_progress
