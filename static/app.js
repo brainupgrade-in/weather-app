@@ -15,18 +15,25 @@
   const resultTemperature = document.getElementById("result-temperature");
   const resultUnitLabel = document.getElementById("result-unit-label");
   const resultWind = document.getElementById("result-wind");
+  const resultWindUnitLabel = document.getElementById("result-wind-unit-label");
   const unitCelsiusInput = document.getElementById("unit-celsius");
   const unitFahrenheitInput = document.getElementById("unit-fahrenheit");
 
   const UNIT_STORAGE_KEY = "weatherApp.temperatureUnit";
   const VALID_UNITS = ["C", "F"];
+  const KMH_TO_MPH = 0.621371;
 
-  // The provider always returns Celsius; keep the raw value around so the
-  // display can be re-converted whenever the unit toggle changes.
+  // The provider always returns Celsius and km/h; keep the raw values around
+  // so the display can be re-converted whenever the unit toggle changes.
   let currentCelsius = null;
+  let currentKmh = null;
 
   function celsiusToFahrenheit(celsius) {
     return (celsius * 9) / 5 + 32;
+  }
+
+  function kmhToMph(kmh) {
+    return kmh * KMH_TO_MPH;
   }
 
   function readStoredUnit() {
@@ -58,6 +65,15 @@
     resultUnitLabel.textContent = unit;
   }
 
+  function renderWindSpeed(unit) {
+    if (currentKmh === null) {
+      return;
+    }
+    const displayValue = unit === "F" ? kmhToMph(currentKmh) : currentKmh;
+    resultWind.textContent = Math.round(displayValue * 10) / 10;
+    resultWindUnitLabel.textContent = unit === "F" ? "mph" : "km/h";
+  }
+
   function setUnit(unit, options) {
     const opts = options || {};
     const nextUnit = VALID_UNITS.includes(unit) ? unit : "C";
@@ -67,6 +83,7 @@
       storeUnit(nextUnit);
     }
     renderTemperature(nextUnit);
+    renderWindSpeed(nextUnit);
   }
 
   function getSelectedUnit() {
@@ -101,8 +118,9 @@
       resultLocation.textContent =
         data.location.name + ", " + data.location.country;
       currentCelsius = data.current.temperature;
-      resultWind.textContent = data.current.wind_speed;
+      currentKmh = data.current.wind_speed;
       renderTemperature(getSelectedUnit());
+      renderWindSpeed(getSelectedUnit());
       showState("success");
     } catch (err) {
       showError("Unable to reach the weather service. Please try again.");
