@@ -7,14 +7,14 @@ Actions, and GitHub Agentic Workflows.
 
 Create a Jira project with:
 
-- Key: `KAN` (the current repository variable value).
+- Key: `WAPP` (the current repository variable value).
 - Issue types: Story, Task, Bug, and Sub-task.
 - Workflow: `Backlog -> Needs clarification -> Ready for development -> Agent-ready -> In progress -> In review -> Validation -> Done`.
 - Required fields: summary, description, acceptance criteria, priority, assignee, and labels.
 - Labels: `agent-generated`, `needs-human-review`, `blocked`, and `github-synced`.
 - Components such as `API`, `Browser`, `CI`, and `Agentic workflows`.
 
-Use Jira issue keys in branch names, commits, and pull request titles, for example `KAN-123-weather-api`.
+Use Jira issue keys in branch names, commits, and pull request titles, for example `WAPP-001-weather-api`.
 
 ## GitHub repository setup
 
