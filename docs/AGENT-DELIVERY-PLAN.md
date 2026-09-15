@@ -29,8 +29,8 @@ Create a Jira Automation rule manually in Jira:
 {
   "event_type": "jira-ready-for-development",
   "client_payload": {
-    "jira_key": "KAN-123",
-    "jira_url": "https://your-site.atlassian.net/browse/KAN-123",
+    "jira_key": "WAPP-001",
+    "jira_url": "https://your-site.atlassian.net/browse/WAPP-001",
     "summary": "Implement the approved change",
     "description": "Acceptance criteria and implementation notes"
   }
