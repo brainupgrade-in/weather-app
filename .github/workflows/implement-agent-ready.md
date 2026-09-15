@@ -16,6 +16,8 @@ safe-outputs:
     max: 1
     allowed-files:
       - "app.py"
+      - "Dockerfile"
+      - "requirements.txt"
       - "templates/**"
       - "static/**"
       - "tests/**"
