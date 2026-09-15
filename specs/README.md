@@ -1,5 +1,8 @@
 # Specifications
 
+- [001 Weather Lookup](001-weather-lookup/spec.md)
+- [002 Temperature Unit Toggle](002-temperature-unit-toggle/spec.md)
+
 This directory contains the approved product and engineering specifications for the Weather App.
 
 ## Spec-driven workflow
