@@ -9,6 +9,11 @@ standalone Weather App and its GitHub Agentic Workflows automation.
 Weather data is provided by [Open-Meteo](https://open-meteo.com/), used under the [CC-BY 4.0
 license](https://open-meteo.com/en/license).
 
+## Workshop guides
+
+- [Set up the accelerated agent-driven SDLC](getting-started/setup.md)
+- [Build features with Jira, GitHub, and Copilot](getting-started/building-features.md)
+
 ## What this demo shows
 
 | gh-aw feature | Where it appears |
