@@ -8,12 +8,14 @@ pull request. Human approval is required only for PR review and merge.
 
 ## Repository flow
 
-1. Jira Automation sends a `jira-ready-for-development` repository event when the issue reaches `Agent-ready`.
-2. `jira-ready-dispatch.yml` creates a GitHub issue with the `agent-ready` label.
-3. `implement-agent-ready.md` reads the issue and repository specification.
-4. The agent uses the restricted `create-pull-request` safe output.
-5. CI and required human review decide whether the PR can merge.
-6. `jira-pr-status.yml` comments the PR status on the Jira issue when the PR title contains its Jira key.
+1. The specification PR title starts with `[WAPP-2]` and is reviewed and merged by a human.
+2. `spec-merged-dispatch.yml` fetches WAPP-2 and dispatches the implementation event.
+3. `jira-ready-dispatch.yml` creates a GitHub issue with the `agent-ready` label.
+4. `jira-ready-dispatch.yml` transitions the Jira issue to `In Progress`.
+5. `implement-agent-ready.md` reads the issue and repository specification.
+6. The agent uses the restricted `create-pull-request` safe output.
+7. CI and required human review decide whether the implementation PR can merge.
+8. `jira-pr-status.yml` transitions the Jira issue to Done and comments the merged PR link.
 
 ## Jira webhook setup
 
@@ -56,6 +58,7 @@ search related work, and add progress context; the webhook remains the event tri
 - The agent opens a draft PR; it cannot merge it.
 - The agent cannot modify workflow files or credentials.
 - GitHub branch protection requires CI and human PR review before merge.
+- After merge, `jira-pr-status.yml` applies the Jira project's `Done` transition and comments the merged PR link.
 
 ## Plan and test expectations
 

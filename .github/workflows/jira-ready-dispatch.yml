@@ -15,6 +15,9 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
                   GITHUB_REPOSITORY: ${{ github.repository }}
+                  JIRA_BASE_URL: ${{ vars.ATLASSIAN_SITE }}
+                  JIRA_USER_EMAIL: ${{ secrets.ATLASSIAN_USER_EMAIL }}
+                  JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
                   JIRA_KEY: ${{ github.event.client_payload.jira_key }}
                   JIRA_URL: ${{ github.event.client_payload.jira_url }}
                   JIRA_SUMMARY: ${{ github.event.client_payload.summary }}
@@ -25,9 +28,24 @@ jobs:
                   test -n "$JIRA_KEY"
                   test -n "$JIRA_SUMMARY"
 
+                                    transition_to_in_progress() {
+                                        transitions=$(curl --fail-with-body --silent --show-error \
+                                            --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                                            --header 'Accept: application/json' \
+                                            "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/transitions")
+                                        in_progress_id=$(jq -er '.transitions[] | select(.to.name == "In Progress") | .id' <<< "$transitions" | head -n 1)
+                                        curl --fail-with-body --silent --show-error \
+                                            --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                                            --header 'Accept: application/json' \
+                                            --header 'Content-Type: application/json' \
+                                            --data "$(jq -n --arg id "$in_progress_id" '{transition: {id: $id}}')" \
+                                            "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/transitions"
+                                    }
+
                                     existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "${JIRA_KEY} in:title" --json number --jq '.[0].number // empty')
                   if [[ -n "$existing" ]]; then
                                         gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Jira issue is ready for development: $JIRA_URL"
+                                        transition_to_in_progress
                     exit 0
                   fi
 
@@ -37,3 +55,4 @@ jobs:
                     --title "[$JIRA_KEY] $JIRA_SUMMARY" \
                     --body "$body" \
                                         --label "agent-ready,jira-synced"
+                                    transition_to_in_progress

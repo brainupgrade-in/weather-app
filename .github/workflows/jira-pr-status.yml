@@ -30,6 +30,17 @@ jobs:
                   fi
 
                   if [[ "$PR_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
+                    transitions=$(curl --fail-with-body --silent --show-error \
+                      --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                      --header 'Accept: application/json' \
+                      "$JIRA_BASE_URL/rest/api/3/issue/$jira_key/transitions")
+                    done_id=$(jq -er '.transitions[] | select(.to.name == "Done") | .id' <<< "$transitions" | head -n 1)
+                    curl --fail-with-body --silent --show-error \
+                      --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                      --header 'Accept: application/json' \
+                      --header 'Content-Type: application/json' \
+                      --data "$(jq -n --arg id "$done_id" '{transition: {id: $id}}')" \
+                      "$JIRA_BASE_URL/rest/api/3/issue/$jira_key/transitions"
                     message="Pull request merged: $PR_URL"
                   else
                     message="Pull request opened: $PR_URL"
