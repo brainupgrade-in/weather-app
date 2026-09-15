@@ -2,6 +2,7 @@
 
 - [001 Weather Lookup](001-weather-lookup/spec.md)
 - [002 Temperature Unit Toggle](002-temperature-unit-toggle/spec.md)
+- [003 Wind Speed Unit Toggle](003-wind-speed-unit-toggle/spec.md)
 
 This directory contains the product and engineering specifications for the Weather App. The implementation agent
 writes each one from its Jira issue, in the same pull request as the code, and it is reviewed with that pull request.

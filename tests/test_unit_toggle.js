@@ -86,6 +86,9 @@ function baseElements() {
     "result-temperature": makeElement("result-temperature"),
     "result-unit-label": makeElement("result-unit-label"),
     "result-wind": makeElement("result-wind"),
+    "result-wind-unit-label": makeElement("result-wind-unit-label", {
+      textContent: "km/h",
+    }),
     "unit-celsius": makeElement("unit-celsius", { checked: true }),
     "unit-fahrenheit": makeElement("unit-fahrenheit", { checked: false }),
   };
@@ -151,6 +154,8 @@ test("selecting Fahrenheit converts the displayed Celsius temperature", async fu
 
   assert.equal(fetchCalls, 1);
   assert.equal(elements["result-temperature"].textContent, 24.5);
+  assert.equal(elements["result-wind"].textContent, 8.1);
+  assert.equal(elements["result-wind-unit-label"].textContent, "km/h");
 
   elements["unit-fahrenheit"].checked = true;
   elements["unit-fahrenheit"].dispatch("change");
@@ -158,6 +163,8 @@ test("selecting Fahrenheit converts the displayed Celsius temperature", async fu
   assert.equal(fetchCalls, 1, "switching units must not call fetch again");
   assert.equal(elements["result-temperature"].textContent, 76.1);
   assert.equal(elements["result-unit-label"].textContent, "F");
+  assert.equal(elements["result-wind"].textContent, 5);
+  assert.equal(elements["result-wind-unit-label"].textContent, "mph");
 
   elements["unit-celsius"].checked = true;
   elements["unit-celsius"].dispatch("change");
@@ -165,6 +172,8 @@ test("selecting Fahrenheit converts the displayed Celsius temperature", async fu
   assert.equal(fetchCalls, 1);
   assert.equal(elements["result-temperature"].textContent, 24.5);
   assert.equal(elements["result-unit-label"].textContent, "C");
+  assert.equal(elements["result-wind"].textContent, 8.1);
+  assert.equal(elements["result-wind-unit-label"].textContent, "km/h");
   void sandbox;
 });
 
@@ -177,4 +186,32 @@ test("selected unit is persisted to sessionStorage when changed", function () {
   elements["unit-fahrenheit"].dispatch("change");
 
   assert.equal(sessionStorage.getItem("weatherApp.temperatureUnit"), "F");
+});
+
+test("a restored Fahrenheit preference applies to wind speed after a lookup", async function () {
+  const elements = baseElements();
+  const fetchImpl = function () {
+    return Promise.resolve({
+      ok: true,
+      json: function () {
+        return Promise.resolve({
+          location: { name: "Pune", country: "India" },
+          current: { temperature: 24.5, wind_speed: 8.1 },
+        });
+      },
+    });
+  };
+  loadApp(
+    elements,
+    makeSessionStorage({ "weatherApp.temperatureUnit": "F" }),
+    fetchImpl
+  );
+
+  await elements["weather-form"]._listeners.submit[0]({ preventDefault: function () {} });
+  await new Promise(function (resolve) {
+    setImmediate(resolve);
+  });
+
+  assert.equal(elements["result-wind"].textContent, 5);
+  assert.equal(elements["result-wind-unit-label"].textContent, "mph");
 });
