@@ -63,15 +63,15 @@ change the API request or response contract.
 
 ## Acceptance criteria
 
-- [ ] A fresh page displays Celsius by default.
-- [ ] Selecting Fahrenheit converts the current displayed temperature correctly.
-- [ ] Selecting Celsius converts the current displayed temperature back correctly.
-- [ ] The selected unit is saved and restored from `sessionStorage`.
-- [ ] Invalid or missing session values fall back to Celsius.
-- [ ] Switching units does not issue another weather-provider request.
-- [ ] The control is keyboard accessible and has an accessible name.
-- [ ] Existing weather lookup success, error, and loading behavior remains intact.
-- [ ] Automated tests cover conversion, persistence, and the unchanged API contract.
+- [x] A fresh page displays Celsius by default.
+- [x] Selecting Fahrenheit converts the current displayed temperature correctly.
+- [x] Selecting Celsius converts the current displayed temperature back correctly.
+- [x] The selected unit is saved and restored from `sessionStorage`.
+- [x] Invalid or missing session values fall back to Celsius.
+- [x] Switching units does not issue another weather-provider request.
+- [x] The control is keyboard accessible and has an accessible name.
+- [x] Existing weather lookup success, error, and loading behavior remains intact.
+- [x] Automated tests cover conversion, persistence, and the unchanged API contract.
 
 ## References
 
