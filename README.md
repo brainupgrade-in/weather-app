@@ -3,8 +3,11 @@
 Type any city and get its weather. The page takes on the colours of that city's sky. This repository contains the
 standalone Weather App and its GitHub Agentic Workflows automation.
 
-> **Status: specification and workflow foundation.** Build the application in this repository according to the
-> approved specification in `specs/001-weather-lookup/spec.md`.
+> **Status: Weather Lookup (WAPP-001) implemented.** See `app.py`, `templates/index.html`, `static/`, and
+> `tests/test_api.py`, built from the approved specification in `specs/001-weather-lookup/spec.md`.
+
+Weather data is provided by [Open-Meteo](https://open-meteo.com/), used under the [CC-BY 4.0
+license](https://open-meteo.com/en/license).
 
 ## What this demo shows
 

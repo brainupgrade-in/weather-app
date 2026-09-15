@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weather Lookup</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <h1>Weather Lookup</h1>
+    <form id="weather-form">
+      <label for="city">City</label>
+      <input type="text" id="city" name="city" placeholder="e.g. Pune" autocomplete="off" required>
+      <button type="submit">Search</button>
+    </form>
+
+    <section id="result" aria-live="polite">
+      <p id="idle-state">Enter a city to see its current weather.</p>
+      <p id="loading-state" hidden>Loading&hellip;</p>
+      <p id="error-state" hidden></p>
+      <div id="success-state" hidden>
+        <h2 id="result-location"></h2>
+        <p>Temperature: <span id="result-temperature"></span>&deg;C</p>
+        <p>Wind speed: <span id="result-wind"></span> km/h</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Weather data by <a href="https://open-meteo.com/" rel="noopener">Open-Meteo.com</a> (CC-BY 4.0).</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
