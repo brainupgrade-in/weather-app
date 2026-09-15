@@ -1,0 +1,59 @@
+name: Sync GitHub issues to Jira
+
+on:
+    issues:
+        types: [opened]
+
+permissions:
+    issues: write
+
+jobs:
+    create-jira-issue:
+        if: ${{ vars.JIRA_SYNC_ENABLED == 'true' }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Create Jira issue
+              id: jira
+              env:
+                  JIRA_BASE_URL: ${{ vars.ATLASSIAN_SITE }}
+                  JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+                  JIRA_ISSUE_TYPE: ${{ vars.JIRA_ISSUE_TYPE || 'Task' }}
+                  JIRA_USER_EMAIL: ${{ secrets.ATLASSIAN_USER_EMAIL }}
+                  JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
+                  ISSUE_TITLE: ${{ github.event.issue.title }}
+                  ISSUE_BODY: ${{ github.event.issue.body }}
+                  ISSUE_URL: ${{ github.event.issue.html_url }}
+              run: |
+                  set -euo pipefail
+
+                  description=$(jq -n \
+                    --arg body "${ISSUE_BODY:-No description provided.}" \
+                    --arg url "$ISSUE_URL" \
+                    '$body + "\n\nGitHub issue: " + $url')
+
+                  payload=$(jq -n \
+                    --arg project "$JIRA_PROJECT_KEY" \
+                    --arg issue_type "$JIRA_ISSUE_TYPE" \
+                    --arg summary "$ISSUE_TITLE" \
+                    --arg description "$description" \
+                    '{fields: {project: {key: $project}, issuetype: {name: $issue_type}, summary: $summary, description: {type: "doc", version: 1, content: [{type: "paragraph", content: [{type: "text", text: $description}]}]}}}')
+
+                  response=$(curl --fail-with-body --silent --show-error \
+                    --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                    --header 'Accept: application/json' \
+                    --header 'Content-Type: application/json' \
+                    --data "$payload" \
+                    "$JIRA_BASE_URL/rest/api/3/issue")
+
+                  key=$(jq -er '.key' <<< "$response")
+                  echo "key=$key" >> "$GITHUB_OUTPUT"
+
+            - name: Link Jira issue in GitHub
+              env:
+                  JIRA_BASE_URL: ${{ vars.ATLASSIAN_SITE }}
+                  JIRA_KEY: ${{ steps.jira.outputs.key }}
+                  ISSUE_NUMBER: ${{ github.event.issue.number }}
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  gh issue comment "$ISSUE_NUMBER" \
+                    --body "Jira issue created: [$JIRA_KEY]($JIRA_BASE_URL/browse/$JIRA_KEY)"

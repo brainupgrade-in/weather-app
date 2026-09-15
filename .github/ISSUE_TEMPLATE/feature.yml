@@ -1,0 +1,28 @@
+name: Feature request
+description: Request a change that can be turned into a Jira story.
+title: "[Feature] "
+labels: ["needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or user outcome
+      description: What problem should this change solve?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions that prove the change is complete.
+      placeholder: |
+        - Given ...
+        - When ...
+        - Then ...
+    validations:
+      required: true
+  - type: input
+    id: jira
+    attributes:
+      label: Jira key
+      description: Add the Jira key if one already exists, for example WAPP-001.

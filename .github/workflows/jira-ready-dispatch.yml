@@ -1,0 +1,37 @@
+name: Create GitHub issue from Jira readiness
+
+on:
+    repository_dispatch:
+        types: [jira-ready-for-development]
+
+permissions:
+    issues: write
+
+jobs:
+    create-github-issue:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Create or find GitHub issue
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  JIRA_KEY: ${{ github.event.client_payload.jira_key }}
+                  JIRA_URL: ${{ github.event.client_payload.jira_url }}
+                  JIRA_SUMMARY: ${{ github.event.client_payload.summary }}
+                  JIRA_DESCRIPTION: ${{ github.event.client_payload.description }}
+              run: |
+                  set -euo pipefail
+
+                  test -n "$JIRA_KEY"
+                  test -n "$JIRA_SUMMARY"
+
+                  existing=$(gh issue list --state all --search "${JIRA_KEY} in:title" --json number --jq '.[0].number // empty')
+                  if [[ -n "$existing" ]]; then
+                    gh issue comment "$existing" --body "Jira issue is ready for development: $JIRA_URL"
+                    exit 0
+                  fi
+
+                  body=$(printf '%s\n\nJira issue: %s\n\nApply the `agent-ready` label only after a maintainer confirms the acceptance criteria.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
+                  gh issue create \
+                    --title "[$JIRA_KEY] $JIRA_SUMMARY" \
+                    --body "$body" \
+                    --label "needs-triage,jira-synced"

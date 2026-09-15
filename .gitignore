@@ -1,0 +1,47 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Coverage and test reports
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+pytest.xml
+test-results/
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Flask local state
+instance/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and local runtime files
+*.log
+*.pid
+
+# OS and editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/*.local.json

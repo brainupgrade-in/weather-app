@@ -1,0 +1,53 @@
+name: Dispatch Jira-ready work
+
+on:
+    schedule:
+        - cron: "*/15 * * * *"
+    workflow_dispatch:
+
+permissions:
+    contents: write
+    issues: read
+
+jobs:
+    dispatch-ready-issues:
+        if: ${{ vars.JIRA_SYNC_ENABLED == 'true' }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Dispatch Jira issues ready for development
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GITHUB_REPOSITORY: ${{ github.repository }}
+                  JIRA_BASE_URL: ${{ vars.ATLASSIAN_SITE }}
+                  JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+                  JIRA_USER_EMAIL: ${{ secrets.ATLASSIAN_USER_EMAIL }}
+                  JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
+              run: |
+                  set -euo pipefail
+
+                  jql="project = ${JIRA_PROJECT_KEY} AND status = \"Ready for development\" ORDER BY updated ASC"
+                  encoded_jql=$(jq -rn --arg value "$jql" '$value|@uri')
+                  response=$(curl --fail-with-body --silent --show-error \
+                    --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                    --header 'Accept: application/json' \
+                    "$JIRA_BASE_URL/rest/api/3/search/jql?jql=$encoded_jql&maxResults=20&fields=summary,description")
+
+                  jq -c '.issues[]' <<< "$response" | while read -r issue; do
+                    key=$(jq -er '.key' <<< "$issue")
+                    summary=$(jq -er '.fields.summary' <<< "$issue")
+                    description=$(jq -r '.fields.description.content[0].content[0].text // "No description provided."' <<< "$issue")
+                    jira_url="$JIRA_BASE_URL/browse/$key"
+
+                                        existing=$(gh issue list --state all --search "[$key] in:title" --json number --jq '.[0].number // empty')
+                                        if [[ -n "$existing" ]]; then
+                                            continue
+                                        fi
+
+                    gh api "repos/$GITHUB_REPOSITORY/dispatches" \
+                      --method POST \
+                      --field event_type=jira-ready-for-development \
+                      --field "client_payload[jira_key]=$key" \
+                      --field "client_payload[jira_url]=$jira_url" \
+                      --field "client_payload[summary]=$summary" \
+                      --field "client_payload[description]=$description"
+                  done
