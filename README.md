@@ -23,7 +23,7 @@ license](https://open-meteo.com/en/license).
 | Human–agent process | A vague issue gets a helpful question back within a minute |
 | Writing workflows with the help of an agent | `daily-repo-status.md` is created **live** by prompting Copilot, not typed by hand |
 | Markdown compiled to a normal Actions workflow | `gh aw compile` turns `.md` into `.lock.yml` |
-| Spec-driven delivery with a human merge gate | `implement-agent-ready.md` turns a merged specification into a draft PR |
+| Jira-driven delivery with a human merge gate | A new Jira issue becomes a GitHub issue, an agent run, and a draft PR (`implement-agent-ready.md`) |
 
 ## Product context
 
@@ -128,7 +128,7 @@ its only safe output with a title prefix.
 
 ## Out of scope
 
-Features without an approved specification in `specs/`. New behaviour starts as a specification PR; see
+Changes that do not start as a Jira issue in `WAPP`. New behaviour starts in Jira; see
 [building-features.md](getting-started/building-features.md).
 
 ## Setup

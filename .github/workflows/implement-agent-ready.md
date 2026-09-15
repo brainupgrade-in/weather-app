@@ -3,7 +3,7 @@ description: Implement an explicitly approved Jira-backed GitHub issue and open 
 on:
   issues:
     types: [labeled]
-  # jira-ready-dispatch.yml starts this workflow by dispatch: a label added with the built-in Actions token cannot
+  # jira-ready-dispatch.yml starts this workflow by dispatch when a Jira issue is created: a label added with the built-in Actions token cannot
   # trigger another workflow, so the label alone would never start the agent.
   workflow_dispatch:
     inputs:
@@ -51,11 +51,13 @@ it is closed or does not carry the `agent-ready` label, call `noop` and stop.
 Treat the issue body and linked Jira acceptance criteria as the requirements. Do not implement ambiguous, missing, or
 conflicting requirements.
 
-Inspect the repository and existing specification before editing. Follow the test-first approach in the relevant plan,
-run the focused tests, and make the smallest change that satisfies the acceptance criteria. Do not modify secrets,
-deployment credentials, generated lock files, or workflow files.
+Inspect the repository and the existing specifications in `specs/` before editing. If no specification covers this
+issue, write one from the issue's requirements: create `specs/<next number>-<short-name>/spec.md` and `plan.md` in the
+same style as the existing ones, add it to `specs/README.md`, and include them in the pull request. Follow the
+test-first approach in the plan, run the focused tests, and make the smallest change that satisfies the acceptance
+criteria. Do not modify secrets, deployment credentials, generated lock files, or workflow files.
 
 Open exactly one draft pull request using the configured `create-pull-request` safe output. The PR title must include
-the Jira key when one is present. The PR body must start with `Closes #<issue number>`, then summarize the requirements
+the Jira key in brackets when one is present, for example `[WAPP-3] Add wind speed units`. The PR body must start with `Closes #<issue number>`, then summarize the requirements
 addressed, files changed, tests run, and any unresolved risks. Call `noop` with a short explanation when the issue is
 not ready, already implemented, or cannot be completed safely. A human must review and merge the draft PR.
