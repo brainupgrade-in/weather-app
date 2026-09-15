@@ -5,13 +5,14 @@ on:
         types: [jira-ready-for-development]
 
 permissions:
+    actions: write
     issues: write
 
 jobs:
     create-github-issue:
         runs-on: ubuntu-latest
         steps:
-            - name: Create or find GitHub issue
+            - name: Create GitHub issue and start the implementation agent
               env:
                   GH_TOKEN: ${{ github.token }}
                   GITHUB_REPOSITORY: ${{ github.repository }}
@@ -28,33 +29,41 @@ jobs:
                   test -n "$JIRA_KEY"
                   test -n "$JIRA_SUMMARY"
 
-                                    transition_to_in_progress() {
-                                        transitions=$(curl --fail-with-body --silent --show-error \
-                                            --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-                                            --header 'Accept: application/json' \
-                                            "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/transitions")
-                                        in_progress_id=$(jq -er '.transitions[] | select(.to.name == "In Progress") | .id' <<< "$transitions" | head -n 1)
-                                        curl --fail-with-body --silent --show-error \
-                                            --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-                                            --header 'Accept: application/json' \
-                                            --header 'Content-Type: application/json' \
-                                            --data "$(jq -n --arg id "$in_progress_id" '{transition: {id: $id}}')" \
-                                            "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/transitions"
-                                    }
+                  transition_to_in_progress() {
+                    transitions=$(curl --fail-with-body --silent --show-error \
+                      --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                      --header 'Accept: application/json' \
+                      "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/transitions")
+                    in_progress_id=$(jq -er '.transitions[] | select(.to.name == "In Progress") | .id' <<< "$transitions" | head -n 1)
+                    curl --fail-with-body --silent --show-error \
+                      --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                      --header 'Accept: application/json' \
+                      --header 'Content-Type: application/json' \
+                      --data "$(jq -n --arg id "$in_progress_id" '{transition: {id: $id}}')" \
+                      "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/transitions"
+                  }
 
-                                    existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "${JIRA_KEY} in:title" --json number --jq '.[0].number // empty')
+                  # Search also matches other titles that mention the key, such as "[agent] [WAPP-1] ...", so keep only
+                  # the issue this workflow creates: its title starts with "[<key>] ".
+                  existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "${JIRA_KEY} in:title" \
+                    --limit 100 --json number,title \
+                    | jq -r --arg prefix "[$JIRA_KEY] " 'map(select(.title | startswith($prefix))) | .[0].number // empty')
                   if [[ -n "$existing" ]]; then
-                                        gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Jira issue is ready for development: $JIRA_URL"
-                                        transition_to_in_progress
+                    gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Jira issue is ready for development: $JIRA_URL"
+                    transition_to_in_progress
                     exit 0
                   fi
 
-                                    body=$(printf '%s\n\nJira issue: %s\n\nThis issue was marked agent-ready in Jira. The Copilot agent will implement it and open a draft pull request for human review.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
-                                    created=$(gh issue create \
-                                        --repo "$GITHUB_REPOSITORY" \
+                  body=$(printf '%s\n\nJira issue: %s\n\nThe specification for this Jira issue was merged. The Copilot agent will implement it and open a draft pull request for human review.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
+
+                  # gh issue create prints the new issue's URL; the issue number is its last path segment.
+                  issue_url=$(gh issue create \
+                    --repo "$GITHUB_REPOSITORY" \
                     --title "[$JIRA_KEY] $JIRA_SUMMARY" \
                     --body "$body" \
-                                                                                --label "jira-synced" \
-                                        --json number --jq '.number')
-                                    gh issue edit "$created" --repo "$GITHUB_REPOSITORY" --add-label agent-ready
-                                    transition_to_in_progress
+                    --label "agent-ready,jira-synced")
+                  issue_number="${issue_url##*/}"
+
+                  # A label added with github.token cannot trigger another workflow, so start the agent explicitly.
+                  gh workflow run implement-agent-ready.lock.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$issue_number"
+                  transition_to_in_progress

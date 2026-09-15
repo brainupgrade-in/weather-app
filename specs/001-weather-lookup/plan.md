@@ -1,29 +1,29 @@
 # Weather Lookup Implementation Plan
 
 **Spec:** [spec.md](spec.md)
-**Status:** Not started
+**Status:** Implemented (PR #10); manual browser check outstanding
 
 ## Phase 0: Baseline and verification
 
-- [ ] Implement the Flask application in this repository according to `spec.md`.
-- [ ] Verify the application exposes `/` and `/api/weather` as described by the specification.
-- [ ] Confirm the provider request shape and current response fields against the approved API contract.
-- [ ] Resolve any mismatch in `spec.md` before continuing implementation.
+- [x] Implement the Flask application in this repository according to `spec.md`.
+- [x] Verify the application exposes `/` and `/api/weather` as described by the specification.
+- [x] Confirm the provider request shape and current response fields against the approved API contract.
+- [x] Resolve any mismatch in `spec.md` before continuing implementation.
 
 ## Phase 1: API contract tests first
 
-- [ ] Write failing pytest cases for a known city, using mocked provider requests.
-- [ ] Write a failing test for an unknown city returning `404` and a JSON error.
-- [ ] Write a failing test for a missing or empty city returning `400` without a provider call.
-- [ ] Implement the minimum API behavior needed to make the tests pass.
-- [ ] Add bounded provider timeouts and safe provider-error handling.
+- [x] Write failing pytest cases for a known city, using mocked provider requests.
+- [x] Write a failing test for an unknown city returning `404` and a JSON error.
+- [x] Write a failing test for a missing or empty city returning `400` without a provider call.
+- [x] Implement the minimum API behavior needed to make the tests pass.
+- [x] Add bounded provider timeouts and safe provider-error handling.
 
 ## Phase 2: Browser behavior and delivery
 
-- [ ] Add or verify the browser success, loading, and error states.
+- [x] Add or verify the browser success, loading, and error states.
 - [ ] Verify that unknown-city errors do not leave an empty weather card.
-- [ ] Preserve Open-Meteo attribution in the README and footer.
-- [ ] Add the GitHub Actions pytest workflow.
+- [x] Preserve Open-Meteo attribution in the README and footer.
+- [x] Add the GitHub Actions pytest workflow.
 - [ ] Run the local app and exercise the headline acceptance scenario manually.
 
 ## Test plan
@@ -53,3 +53,6 @@
 ## Progress log
 
 - **2026-09-15:** Created the initial SDD specification and implementation plan from the repository README. No application code changed.
+- **2026-09-15:** Implemented by the agent in PR #10 and merged. The six pytest cases pass, and `python app.py` returned
+  200 for Pune, 404 for an unknown city, and 400 for an empty city against live Open-Meteo. The two unchecked browser
+  items have not been exercised in a browser yet.

@@ -1,7 +1,7 @@
 # Temperature Unit Toggle Implementation Plan
 
 **Spec:** [spec.md](spec.md)
-**Status:** Ready for development
+**Status:** Implemented (PR #14)
 
 ## Phase 0: Baseline
 
