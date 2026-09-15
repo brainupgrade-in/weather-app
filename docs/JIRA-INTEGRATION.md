@@ -51,6 +51,7 @@ Jira should dispatch work only when an issue reaches `Agent-ready`; the GitHub d
 - Agents may clarify issues, draft specifications, create task breakdowns, and post summaries.
 - Humans approve scope changes, priority changes, merges, and releases. A merged PR automatically closes the linked Jira issue.
 - Every Jira story should link to its specification, implementation pull request, and CI result.
+- When the agent work starts, the linked Jira issue is automatically transitioned to `In Progress`.
 - Do not let an agent transition a Jira issue to `Done`; `jira-pr-status.yml` performs that transition only after a merged PR.
 - Include the Jira key in the pull request title so `jira-pr-status.yml` can report the PR event back to Jira.
 

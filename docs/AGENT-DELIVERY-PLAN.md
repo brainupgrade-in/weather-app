@@ -11,10 +11,11 @@ pull request. Human approval is required only for PR review and merge.
 1. The specification PR title starts with `[WAPP-2]` and is reviewed and merged by a human.
 2. `spec-merged-dispatch.yml` fetches WAPP-2 and dispatches the implementation event.
 3. `jira-ready-dispatch.yml` creates a GitHub issue with the `agent-ready` label.
-4. `implement-agent-ready.md` reads the issue and repository specification.
-5. The agent uses the restricted `create-pull-request` safe output.
-6. CI and required human review decide whether the implementation PR can merge.
-7. `jira-pr-status.yml` transitions WAPP-2 to Done and comments the merged PR link.
+4. `jira-ready-dispatch.yml` transitions the Jira issue to `In Progress`.
+5. `implement-agent-ready.md` reads the issue and repository specification.
+6. The agent uses the restricted `create-pull-request` safe output.
+7. CI and required human review decide whether the implementation PR can merge.
+8. `jira-pr-status.yml` transitions the Jira issue to Done and comments the merged PR link.
 
 ## Jira webhook setup
 
