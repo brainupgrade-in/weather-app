@@ -1,7 +1,7 @@
 # Wind Speed Unit Toggle
 
 **Status:** Implemented
-**Feature ID:** WAPP-004
+**Feature ID:** WAPP-4
 **Owner:** Weather App maintainers
 **Depends on:** [Temperature Unit Toggle](../002-temperature-unit-toggle/spec.md)
 

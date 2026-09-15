@@ -53,7 +53,8 @@ conflicting requirements.
 
 Inspect the repository and the existing specifications in `specs/` before editing. If no specification covers this
 issue, write one from the issue's requirements: create `specs/<next number>-<short-name>/spec.md` and `plan.md` in the
-same style as the existing ones, add it to `specs/README.md`, and include them in the pull request. Follow the
+same style as the existing ones, add it to `specs/README.md`, and include them in the pull request. Set its Feature ID
+to the Jira key exactly as Jira shows it, for example `WAPP-4`, never zero-padded like `WAPP-004`. Follow the
 test-first approach in the plan, run the focused tests, and make the smallest change that satisfies the acceptance
 criteria. Do not modify secrets, deployment credentials, generated lock files, or workflow files.
 

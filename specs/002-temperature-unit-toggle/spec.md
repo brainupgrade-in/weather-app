@@ -1,7 +1,7 @@
 # Temperature Unit Toggle
 
 **Status:** Implemented (PR #14)
-**Feature ID:** WAPP-002
+**Feature ID:** WAPP-2
 **Owner:** Weather App maintainers
 **Depends on:** [Weather Lookup](../001-weather-lookup/spec.md)
 
