@@ -49,9 +49,9 @@ Jira should dispatch work only when an issue reaches `Agent-ready`; the GitHub d
 - Jira is the source of truth for requirement, priority, ownership, and delivery status.
 - GitHub is the source of truth for code, review, CI, and agent workflow execution.
 - Agents may clarify issues, draft specifications, create task breakdowns, and post summaries.
-- Humans approve scope changes, priority changes, merges, releases, and issue closure.
+- Humans approve scope changes, priority changes, merges, and releases. A merged PR automatically closes the linked Jira issue.
 - Every Jira story should link to its specification, implementation pull request, and CI result.
-- Do not let an agent transition a Jira issue to `Done` without a merged pull request and passing CI.
+- Do not let an agent transition a Jira issue to `Done`; `jira-pr-status.yml` performs that transition only after a merged PR.
 - Include the Jira key in the pull request title so `jira-pr-status.yml` can report the PR event back to Jira.
 
 ## First setup check

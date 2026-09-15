@@ -56,6 +56,7 @@ search related work, and add progress context; the webhook remains the event tri
 - The agent opens a draft PR; it cannot merge it.
 - The agent cannot modify workflow files or credentials.
 - GitHub branch protection requires CI and human PR review before merge.
+- After merge, `jira-pr-status.yml` applies the Jira project's `Done` transition and comments the merged PR link.
 
 ## Plan and test expectations
 
