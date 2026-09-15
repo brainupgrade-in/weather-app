@@ -50,10 +50,15 @@ jobs:
                     --header 'Accept: application/json' \
                     "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY?fields=summary,description")
                   summary=$(jq -er '.fields.summary' <<< "$jira_issue")
-                  # Flatten the whole Atlassian Document Format description, one block per paragraph or list.
-                  description=$(jq -r '[.fields.description.content[]?
-                    | [.. | objects | if .type == "text" then .text elif .type == "hardBreak" then "\n" else empty end]
-                    | join("")] | join("\n\n")' <<< "$jira_issue")
+                  # Flatten the whole Atlassian Document Format description: one block per paragraph, one "- " line per
+                  # bullet item, and one numbered line per ordered-list item, so list items do not run together.
+                  description=$(jq -r '
+                    def inline: [.. | objects | if .type == "text" then .text elif .type == "hardBreak" then "\n" else empty end] | join("");
+                    def block:
+                      if .type == "bulletList" then [.content[]? | "- " + inline] | join("\n")
+                      elif .type == "orderedList" then [.content[]? | inline] | to_entries | map("\(.key + 1). \(.value)") | join("\n")
+                      else inline end;
+                    [.fields.description.content[]? | block] | join("\n\n")' <<< "$jira_issue")
 
                   # jira-sync.yml creates Jira issues from GitHub issues and writes this line into their description.
                   # Those already have a GitHub issue, so skip them instead of creating a second one.
