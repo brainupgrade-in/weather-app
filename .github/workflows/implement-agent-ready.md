@@ -14,6 +14,7 @@ safe-outputs:
     title-prefix: "[agent] "
     labels: [agent-generated, needs-human-review]
     max: 1
+    protected-files: allowed
     allowed-files:
       - "app.py"
       - "Dockerfile"
@@ -26,6 +27,10 @@ safe-outputs:
       - "specs/**"
       - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
+network:
+  allowed:
+    - defaults
+    - python
 ---
 # Implement approved Jira work
 
