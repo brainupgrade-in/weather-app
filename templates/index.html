@@ -21,7 +21,20 @@
       <p id="error-state" hidden></p>
       <div id="success-state" hidden>
         <h2 id="result-location"></h2>
-        <p>Temperature: <span id="result-temperature"></span>&deg;C</p>
+        <p>
+          Temperature: <span id="result-temperature"></span>&deg;<span id="result-unit-label">C</span>
+        </p>
+        <fieldset id="unit-toggle">
+          <legend>Temperature unit</legend>
+          <label>
+            <input type="radio" name="unit" id="unit-celsius" value="C" checked>
+            Celsius (&deg;C)
+          </label>
+          <label>
+            <input type="radio" name="unit" id="unit-fahrenheit" value="F">
+            Fahrenheit (&deg;F)
+          </label>
+        </fieldset>
         <p>Wind speed: <span id="result-wind"></span> km/h</p>
       </div>
     </section>
