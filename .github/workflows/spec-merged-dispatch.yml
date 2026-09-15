@@ -1,0 +1,41 @@
+name: Dispatch implementation after specification merge
+
+on:
+    pull_request:
+        types: [closed]
+
+permissions:
+    contents: write
+
+jobs:
+    dispatch-feature:
+        if: ${{ github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, '[WAPP-2]') }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Dispatch Jira feature implementation
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GITHUB_REPOSITORY: ${{ github.repository }}
+                  JIRA_BASE_URL: ${{ vars.ATLASSIAN_SITE }}
+                  JIRA_USER_EMAIL: ${{ secrets.ATLASSIAN_USER_EMAIL }}
+                  JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
+              run: |
+                  set -euo pipefail
+
+                  jira_key=$(printf '%s' '${{ github.event.pull_request.title }}' | grep -Eo '[A-Z][A-Z0-9]+-[0-9]+' | head -n 1)
+                  issue=$(curl --fail-with-body --silent --show-error \
+                    --user "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                    --header 'Accept: application/json' \
+                    "$JIRA_BASE_URL/rest/api/3/issue/$jira_key?fields=summary,description")
+                  summary=$(jq -er '.fields.summary' <<< "$issue")
+                  description=$(jq -r '.fields.description.content[0].content[0].text // "No description provided."' <<< "$issue")
+                  jira_url="$JIRA_BASE_URL/browse/$jira_key"
+
+                  jq -n \
+                    --arg event_type jira-ready-for-development \
+                    --arg key "$jira_key" \
+                    --arg url "$jira_url" \
+                    --arg summary "$summary" \
+                    --arg description "$description" \
+                    '{event_type: $event_type, client_payload: {jira_key: $key, jira_url: $url, summary: $summary, description: $description}}' \
+                  | gh api "repos/$GITHUB_REPOSITORY/dispatches" --method POST --input -
