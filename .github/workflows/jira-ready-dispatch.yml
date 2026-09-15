@@ -14,6 +14,7 @@ jobs:
             - name: Create or find GitHub issue
               env:
                   GH_TOKEN: ${{ github.token }}
+                  GITHUB_REPOSITORY: ${{ github.repository }}
                   JIRA_KEY: ${{ github.event.client_payload.jira_key }}
                   JIRA_URL: ${{ github.event.client_payload.jira_url }}
                   JIRA_SUMMARY: ${{ github.event.client_payload.summary }}
@@ -24,14 +25,15 @@ jobs:
                   test -n "$JIRA_KEY"
                   test -n "$JIRA_SUMMARY"
 
-                  existing=$(gh issue list --state all --search "${JIRA_KEY} in:title" --json number --jq '.[0].number // empty')
+                                    existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "${JIRA_KEY} in:title" --json number --jq '.[0].number // empty')
                   if [[ -n "$existing" ]]; then
-                    gh issue comment "$existing" --body "Jira issue is ready for development: $JIRA_URL"
+                                        gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Jira issue is ready for development: $JIRA_URL"
                     exit 0
                   fi
 
                                     body=$(printf '%s\n\nJira issue: %s\n\nThis issue was marked agent-ready in Jira. The Copilot agent will implement it and open a draft pull request for human review.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
-                  gh issue create \
+                                    gh issue create \
+                                        --repo "$GITHUB_REPOSITORY" \
                     --title "[$JIRA_KEY] $JIRA_SUMMARY" \
                     --body "$body" \
                                         --label "agent-ready,jira-synced"
