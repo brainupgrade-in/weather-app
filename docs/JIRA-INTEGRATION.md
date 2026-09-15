@@ -9,7 +9,7 @@ Create a Jira project with:
 
 - Key: `KAN` (the current repository variable value).
 - Issue types: Story, Task, Bug, and Sub-task.
-- Workflow: `Backlog -> Needs clarification -> Ready for development -> In progress -> In review -> Validation -> Done`.
+- Workflow: `Backlog -> Needs clarification -> Ready for development -> Agent-ready -> In progress -> In review -> Validation -> Done`.
 - Required fields: summary, description, acceptance criteria, priority, assignee, and labels.
 - Labels: `agent-generated`, `needs-human-review`, `blocked`, and `github-synced`.
 - Components such as `API`, `Browser`, `CI`, and `Agentic workflows`.
@@ -41,8 +41,8 @@ The workflow in `.github/workflows/jira-sync.yml` creates one Jira issue for eac
 adds a link to the Jira issue back to GitHub. It is disabled until `JIRA_SYNC_ENABLED` is set to `true`.
 
 The complete Jira-to-agent-to-PR flow is documented in [docs/AGENT-DELIVERY-PLAN.md](AGENT-DELIVERY-PLAN.md).
-Jira should dispatch work only when an issue reaches `Ready for development`; a maintainer must then apply the
-`agent-ready` GitHub label before the implementation agent runs.
+Jira should dispatch work only when an issue reaches `Agent-ready`; the GitHub dispatch workflow applies the
+`agent-ready` label automatically.
 
 ## Agent and delivery conventions
 

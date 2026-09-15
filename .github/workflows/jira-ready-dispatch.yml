@@ -30,8 +30,8 @@ jobs:
                     exit 0
                   fi
 
-                  body=$(printf '%s\n\nJira issue: %s\n\nApply the `agent-ready` label only after a maintainer confirms the acceptance criteria.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
+                                    body=$(printf '%s\n\nJira issue: %s\n\nThis issue was marked agent-ready in Jira. The Copilot agent will implement it and open a draft pull request for human review.' "${JIRA_DESCRIPTION:-No description provided.}" "$JIRA_URL")
                   gh issue create \
                     --title "[$JIRA_KEY] $JIRA_SUMMARY" \
                     --body "$body" \
-                    --label "needs-triage,jira-synced"
+                                        --label "agent-ready,jira-synced"
