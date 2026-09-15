@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+    push:
+    pull_request:
+
+permissions:
+    contents: read
+
+jobs:
+    tests:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
+                  pip install pytest
+            - name: Run tests
+              run: |
+                  if find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
+                    pytest
+                  else
+                    echo "No pytest tests are present yet; specification work is still in progress."
+                  fi
