@@ -23,6 +23,8 @@ jobs:
                   if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
                   pip install pytest
             - name: Run tests
+              env:
+                  PYTHONPATH: .
               run: |
                   if find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
                     pytest
