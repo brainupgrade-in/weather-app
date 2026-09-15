@@ -1,6 +1,6 @@
 # Weather Lookup
 
-**Status:** Draft
+**Status:** Implemented (PR #10)
 **Feature ID:** WAPP-001
 **Owner:** Weather App maintainers
 

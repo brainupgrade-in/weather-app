@@ -31,3 +31,14 @@ jobs:
                   else
                     echo "No pytest tests are present yet; specification work is still in progress."
                   fi
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+            - name: Run JavaScript tests
+              run: |
+                  if compgen -G 'tests/test_*.js' > /dev/null; then
+                    node --test tests/test_*.js
+                  else
+                    echo "No JavaScript tests are present."
+                  fi

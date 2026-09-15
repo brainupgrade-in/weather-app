@@ -9,12 +9,13 @@ Create a Jira project with:
 
 - Key: `WAPP` (the current repository variable value).
 - Issue types: Story, Task, Bug, and Sub-task.
-- Workflow: `Backlog -> Needs clarification -> Ready for development -> Agent-ready -> In progress -> In review -> Validation -> Done`.
+- Workflow statuses named exactly `To Do`, `In Progress`, and `Done`. The workflows transition by status name.
 - Required fields: summary, description, acceptance criteria, priority, assignee, and labels.
 - Labels: `agent-generated`, `needs-human-review`, `blocked`, and `github-synced`.
 - Components such as `API`, `Browser`, `CI`, and `Agentic workflows`.
 
-Use Jira issue keys in branch names, commits, and pull request titles, for example `WAPP-001-weather-api`.
+Use Jira issue keys exactly as Jira shows them in branch names, commits, and pull request titles, for example
+`WAPP-3-weather-api`. Do not zero-pad them.
 
 ## GitHub repository setup
 
@@ -41,15 +42,14 @@ The workflow in `.github/workflows/jira-sync.yml` creates one Jira issue for eac
 adds a link to the Jira issue back to GitHub. It is disabled until `JIRA_SYNC_ENABLED` is set to `true`.
 
 The complete Jira-to-agent-to-PR flow is documented in [docs/AGENT-DELIVERY-PLAN.md](AGENT-DELIVERY-PLAN.md).
-Jira should dispatch work only when an issue reaches `Agent-ready`; the GitHub dispatch workflow applies the
-`agent-ready` label automatically.
+Work is dispatched when a human merges the issue's specification PR; no Jira Automation rule is needed.
 
 ## Agent and delivery conventions
 
 - Jira is the source of truth for requirement, priority, ownership, and delivery status.
 - GitHub is the source of truth for code, review, CI, and agent workflow execution.
 - Agents may clarify issues, draft specifications, create task breakdowns, and post summaries.
-- Humans approve scope changes, priority changes, merges, and releases. A merged PR automatically closes the linked Jira issue.
+- Humans approve scope changes, priority changes, merges, and releases. A merged implementation PR moves the linked Jira issue to Done; a merged specification PR does not.
 - Every Jira story should link to its specification, implementation pull request, and CI result.
 - When the agent work starts, the linked Jira issue is automatically transitioned to `In Progress`.
 - Do not let an agent transition a Jira issue to `Done`; `jira-pr-status.yml` performs that transition only after a merged PR.

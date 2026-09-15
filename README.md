@@ -1,10 +1,11 @@
 # Weather App
 
-Type any city and get its weather. The page takes on the colours of that city's sky. This repository contains the
-standalone Weather App and its GitHub Agentic Workflows automation.
+Type any city and get its current weather. This repository contains the standalone Weather App and its GitHub Agentic
+Workflows automation.
 
-> **Status: Weather Lookup (WAPP-001) implemented.** See `app.py`, `templates/index.html`, `static/`, and
-> `tests/test_api.py`, built from the approved specification in `specs/001-weather-lookup/spec.md`.
+> **Status: Weather Lookup (WAPP-1) and Temperature Unit Toggle (WAPP-2) implemented.** Both were built by the
+> implementation agent from the approved specifications in `specs/001-weather-lookup/` and
+> `specs/002-temperature-unit-toggle/`, then reviewed and merged by a human.
 
 Weather data is provided by [Open-Meteo](https://open-meteo.com/), used under the [CC-BY 4.0
 license](https://open-meteo.com/en/license).
@@ -22,6 +23,7 @@ license](https://open-meteo.com/en/license).
 | Human–agent process | A vague issue gets a helpful question back within a minute |
 | Writing workflows with the help of an agent | `daily-repo-status.md` is created **live** by prompting Copilot, not typed by hand |
 | Markdown compiled to a normal Actions workflow | `gh aw compile` turns `.md` into `.lock.yml` |
+| Spec-driven delivery with a human merge gate | `implement-agent-ready.md` turns a merged specification into a draft PR |
 
 ## Product context
 
@@ -35,19 +37,25 @@ workflow by hand, asks Copilot to write it.
 **Stack:** Python 3.12, Flask, requests, gunicorn. Vanilla JS and CSS. No database, no secrets.
 
 ```
-app.py              # GET /  and  GET /api/weather?city=<name>  (Open-Meteo geocode + forecast)
-templates/index.html
-static/app.js       # sessionStorage cache (1-hour TTL), city chips, sky themes, particle canvas
+app.py                     # GET /  and  GET /api/weather?city=<name>  (Open-Meteo geocode + forecast)
+templates/index.html       # search form, loading/error/result states, °C/°F toggle
+static/app.js              # lookup client and unit toggle (preference kept in sessionStorage)
 static/style.css
-NOTES.md            # design assumptions; keep it, and issue triage can cite it
-Dockerfile
+tests/test_api.py          # pytest, Open-Meteo mocked
+tests/test_unit_toggle.js  # node:test, unit toggle against the real static/app.js
+specs/                     # approved specifications and plans, one directory per feature
 ```
 
-**Implementation requirements:**
+Run it locally:
 
-- `tests/test_api.py`: pytest with `requests` mocked, covering a known city (200), an unknown city (404), and an
-  empty `city` parameter.
-- `.github/workflows/tests.yml`: plain Actions running pytest.
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt pytest
+python -m pytest && node --test tests/test_*.js
+python app.py              # http://127.0.0.1:5000
+```
+
+`.github/workflows/tests.yml` runs both test suites and is the required `Tests / tests` check.
 
 ## Example issues
 
@@ -57,9 +65,12 @@ only a short acknowledgement.
 | # | Title / body | Why |
 |---|---|---|
 | 1 | *"Please add better setup instructions."* | The deck's own example. Vague: for which OS, and for Docker or local? |
-| 2 | *"Weather is wrong for Springfield."* | Vague, and it's a real limitation: the first geocoding match wins (`NOTES.md` assumption 7). |
-| 3 | *"Add a °C / °F toggle. Suggested: a button next to the temperature, remembered in sessionStorage."* | Clear. No questions needed. |
-| 4 | *"Unknown city returns 404 but the page shows a blank card instead of the message."* | Clear bug report. |
+| 2 | *"Weather is wrong for Springfield."* | Vague, and it's a real limitation: the first geocoding match wins (decision record in `specs/001-weather-lookup/spec.md`). |
+| 3 | *"Show the wind speed in mph when Fahrenheit is selected."* | Clear. No questions needed. |
+| 4 | *"When the server returns a 500, the page says 'Unable to reach the weather service' even though the service responded."* | Clear bug report. |
+
+Opening an issue also creates a Jira issue while `JIRA_SYNC_ENABLED` is `true` (`jira-sync.yml`). Expect a WAPP issue per
+example, and remove both when you are done.
 
 ## GitHub Agentic Workflows
 
@@ -87,7 +98,7 @@ them in a single line.
 
 ### `daily-repo-status.md`
 
-Create this workflow through a Copilot agent session by requesting:
+Not in the repository yet: it is created live. Request it in a Copilot agent session:
 
 > *Create a GitHub agentic workflow that runs every weekday morning and opens an issue summarising what
 > happened in this repo in the last 24 hours: new issues, comments, merged PRs, and anything that looks stuck.
@@ -110,21 +121,17 @@ its only safe output with a title prefix.
 ## Acceptance criteria
 
 - [ ] `python app.py` serves the page; `GET /api/weather?city=Pune` returns 200 with JSON; an unknown city returns 404.
-- [ ] `pytest` passes with the network mocked, and `tests.yml` is green.
+- [ ] `pytest` and `node --test tests/test_*.js` pass with the network mocked, and `tests.yml` is green.
 - [ ] `issue-clarifier.md` is under 20 lines and compiles; its `.lock.yml` is committed.
 - [ ] On seed issues #1 and #2 the agent asks at least one specific question; on #3 it asks none.
 - [ ] A rehearsal run of the live prompt produced a workflow that compiles, and it is saved on the branch `fallback/daily-repo-status`.
 
 ## Out of scope
 
-Any change to the UI, caching or weather logic. This demo is about the workflow, not the app.
+Features without an approved specification in `specs/`. New behaviour starts as a specification PR; see
+[building-features.md](getting-started/building-features.md).
 
 ## Setup
 
-- Install the CLI: `gh extensions install github/gh-aw`, then set up the Copilot engine's secret as `gh aw` documents.
-- Configure Jira using [docs/JIRA-INTEGRATION.md](docs/JIRA-INTEGRATION.md). Jira sync is disabled until the repository
-  variable `JIRA_SYNC_ENABLED` is set to `true`.
-- The full approved-work path is documented in [docs/AGENT-DELIVERY-PLAN.md](docs/AGENT-DELIVERY-PLAN.md): Jira readiness
-  creates a GitHub issue, and the `agent-ready` label authorizes a draft PR from the implementation agent.
-- **Keep Open-Meteo's CC-BY attribution** in the README and footer if the repo goes public.
-- Remove temporary example issues when they are no longer needed.
+Follow [getting-started/setup.md](getting-started/setup.md). It covers the gh-aw CLI, the `COPILOT_GITHUB_TOKEN` and
+Jira secrets, the labels, branch protection, and Jira. **Keep Open-Meteo's CC-BY attribution** in the README and footer.
